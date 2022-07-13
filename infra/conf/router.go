@@ -10,6 +10,7 @@ import (
 	"github.com/xtls/xray-core/app/router"
 	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/platform/filesystem"
+	"github.com/xtls/xray-core/common/session"
 )
 
 type RouterRulesConfig struct {
@@ -61,6 +62,7 @@ type RouterConfig struct {
 	Balancers      []*BalancingRule   `json:"balancers"`
 
 	DomainMatcher string `json:"domainMatcher"`
+	OutboundIp    string `json:"outboundIp"` // Outbound network card ip
 }
 
 func (c *RouterConfig) getDomainStrategy() router.Config_DomainStrategy {
@@ -114,6 +116,12 @@ func (c *RouterConfig) Build() (*router.Config, error) {
 			return nil, err
 		}
 		config.BalancingRule = append(config.BalancingRule, balancer)
+	}
+	if len(c.OutboundIp) > 0 {
+		var outboundIp = net.ParseIP(c.OutboundIp)
+		if outboundIp != nil {
+			session.SetOutboundIp(outboundIp)
+		}
 	}
 	return config, nil
 }

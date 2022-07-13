@@ -2,6 +2,8 @@ package session
 
 import (
 	"context"
+	"github.com/xtls/xray-core/common/net"
+	"sync"
 
 	"github.com/xtls/xray-core/features/routing"
 )
@@ -18,6 +20,9 @@ const (
 	trackedConnectionErrorKey
 	dispatcherKey
 )
+
+var once sync.Once
+var outboundIp net.IP
 
 // ContextWithID returns a new context with the given ID.
 func ContextWithID(ctx context.Context, id ID) context.Context {
@@ -49,6 +54,9 @@ func ContextWithOutbound(ctx context.Context, outbound *Outbound) context.Contex
 
 func OutboundFromContext(ctx context.Context) *Outbound {
 	if outbound, ok := ctx.Value(outboundSessionKey).(*Outbound); ok {
+		if outboundIp != nil && len(outboundIp) > 0 {
+			outbound.Gateway = net.IPAddress(outboundIp)
+		}
 		return outbound
 	}
 	return nil
@@ -130,4 +138,11 @@ func DispatcherFromContext(ctx context.Context) routing.Dispatcher {
 		return dispatcher
 	}
 	return nil
+}
+
+// SetOutboundIp Solve the traffic infinite loop of local loopback, Can only be set once, otherwise restart the process
+func SetOutboundIp(ip net.IP) {
+	once.Do(func() {
+		outboundIp = ip
+	})
 }
